@@ -1,0 +1,6 @@
+{
+  "name": "finova Spend Copilot",
+  "description": "Interactive monthly expenditures tracker, projected run-rate forecaster, budget alerts, and AI copilot re-optimization engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
