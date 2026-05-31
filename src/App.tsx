@@ -21,6 +21,15 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
+import {
   Transaction,
   TransactionCategory,
   SpendAnalysis,
@@ -87,6 +96,34 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     isFrozen: false
   }
 ];
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-950/95 border border-cyan-500/30 p-2.5 rounded shadow-[0_10px_30px_rgba(255,255,255,0.08)] backdrop-blur-md">
+        <p className="text-[10px] font-black uppercase text-cyan-400 tracking-wider mb-1.5">{label}</p>
+        <div className="space-y-1 text-xs">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2 justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-400">{entry.name}:</span>
+              </span>
+              <span className="font-mono font-bold text-slate-100">${Number(entry.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface Toast {
   id: string;
@@ -200,6 +237,27 @@ export default function App() {
     elapsedDays > 0 ? (activeAggregate / elapsedDays) * totalDaysInMonth : activeAggregate;
   const isCurrentlyBreaching = projectedRunRate > budget;
   const savingsRequired = Math.max(0, projectedRunRate - budget);
+
+  // Generate 30-day projection chart dataset
+  const chartData = React.useMemo(() => {
+    const data = [];
+    const dailyRate = elapsedDays > 0 ? activeAggregate / elapsedDays : 0;
+    
+    for (let day = 1; day <= 31; day++) {
+      // Historical spend is accumulated up to the elapsedDays
+      const historicalAmount = day <= elapsedDays ? Math.round(dailyRate * day) : null;
+      // Projected spend goes for all 31 days
+      const projectedAmount = Math.round(dailyRate * day);
+      
+      data.push({
+        day: `Day ${day}`,
+        "Historical Spent": historicalAmount !== null ? historicalAmount : undefined,
+        "Projected Runway": projectedAmount,
+        "Ceiling limit": budget
+      });
+    }
+    return data;
+  }, [activeAggregate, elapsedDays, budget]);
 
   // Trigger analysis when items, elapsed days, or budget limits change
   useEffect(() => {
@@ -729,6 +787,84 @@ export default function App() {
                 {isCurrentlyBreaching && (
                   <div className="absolute inset-x-0 -bottom-1 h-1 bg-[#39ff14] animate-pulse rounded-b-sm" />
                 )}
+              </div>
+            </div>
+
+            {/* Interactive Monthly Forecast Recharts visualizer */}
+            <div className="overline-card bg-slate-900/40 backdrop-blur-md p-5 rounded-sm border border-white/5 flex flex-col space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-white/5 pb-3">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-cyan-400 flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    Month-to-Date Predictive Model
+                  </h3>
+                  <p className="text-[10px] text-slate-400 uppercase mt-0.5">
+                    30-Day predictive projection trajectory vs active budget ceiling
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-[9px] font-mono whitespace-nowrap bg-slate-950/40 px-2 py-1 rounded border border-white/5">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-1.5 rounded-xs" style={{ backgroundColor: '#22d3ee' }} />
+                    <span className="text-slate-400">HISTORICAL SPEND</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-1.5 rounded-xs" style={{ backgroundColor: '#39ff14' }} />
+                    <span className="text-slate-400 font-bold text-[#39ff14]">PROJECTED RUNWAY</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-1.5 rounded-xs" style={{ backgroundColor: '#f43f5e' }} />
+                    <span className="text-slate-400">BUDGET CEILING</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="h-64 w-full text-xs text-slate-400 font-mono">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 12, right: 12, left: -22, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.03)" vertical={false} />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="rgba(255, 255, 255, 0.3)" 
+                      fontSize={9}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={8}
+                    />
+                    <YAxis 
+                      stroke="rgba(255, 255, 255, 0.3)" 
+                      fontSize={9}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `$${value.toLocaleString()}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Historical Spent" 
+                      stroke="#22d3ee" 
+                      strokeWidth={2.5} 
+                      dot={false}
+                      activeDot={{ r: 4, stroke: "#22d3ee", strokeWidth: 1 }}
+                      connectNulls
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Projected Runway" 
+                      stroke="#39ff14" 
+                      strokeWidth={1.5} 
+                      strokeDasharray="4 4"
+                      dot={false}
+                      connectNulls
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Ceiling limit" 
+                      stroke="#f43f5e" 
+                      strokeWidth={1.5} 
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
