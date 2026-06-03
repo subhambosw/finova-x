@@ -683,7 +683,12 @@ export default function App() {
             {/* 3 Metric Cards row conforming to exact PRD specs and Frosted Glass layouts */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Card 1: Active Spending Aggregate */}
-              <div className="overline-card bg-slate-900/40 backdrop-blur-md p-4 flex flex-col justify-between h-34 rounded-sm transition-all duration-200 hover:border-cyan-500/40">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="overline-card bg-slate-900/40 backdrop-blur-md p-4 flex flex-col justify-between h-34 rounded-sm transition-all duration-205 hover:border-cyan-500/40"
+              >
                 <div>
                   <p className="text-[10px] text-white/50 uppercase font-bold tracking-wider">
                     Active Expenditures Aggregate
@@ -708,10 +713,15 @@ export default function App() {
                     style={{ width: `${Math.min(100, budget > 0 ? (activeAggregate / budget) * 100 : 100)}%` }}
                   />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 2: Monthly Threshold Gauge */}
-              <div className="overline-card bg-slate-900/40 backdrop-blur-md p-4 flex flex-col justify-between h-34 rounded-sm transition-all duration-200 hover:border-cyan-500/40">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="overline-card bg-slate-900/40 backdrop-blur-md p-4 flex flex-col justify-between h-34 rounded-sm transition-all duration-205 hover:border-cyan-500/40"
+              >
                 <div>
                   <p className="text-[10px] text-white/50 uppercase font-bold tracking-wider">
                     Monthly Threshold Gauge
@@ -737,12 +747,15 @@ export default function App() {
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 3: Projected Run Rate Forecaster (With extreme highlight fluorescent styling and active warning overlays) */}
-              <div
+              <motion.div
                 onClick={() => setIsDrawerOpen(true)}
-                className={`overline-card p-4 h-34 rounded-sm flex flex-col justify-between cursor-pointer transition-all duration-300 transform hover:-translate-y-0.5 relative group ${
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className={`overline-card p-4 h-34 rounded-sm flex flex-col justify-between cursor-pointer transition-all duration-205 hover:-translate-y-0.5 relative group ${
                   isCurrentlyBreaching
                     ? "bg-white/5 border-[#39ff14]/70 shadow-[0_0_20px_rgba(57,255,20,0.18)] border-b-[#39ff14] border-x-[#39ff14]"
                     : "bg-slate-900/40 backdrop-blur-md hover:border-cyan-500/40"
@@ -795,7 +808,7 @@ export default function App() {
                 {isCurrentlyBreaching && (
                   <div className="absolute inset-x-0 -bottom-1 h-1 bg-[#39ff14] animate-pulse rounded-b-sm" />
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* Interactive Monthly Forecast Recharts visualizer */}
