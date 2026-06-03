@@ -212,6 +212,14 @@ export default function App() {
   const [newAmount, setNewAmount] = useState<string>("");
   const [newCategory, setNewCategory] = useState<TransactionCategory>("SaaS Subscriptions");
   const [newDate, setNewDate] = useState<string>("2026-05-20");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Filtered transactions by label or vendor name in real-time
+  const filteredTransactions = React.useMemo(() => {
+    return transactions.filter((tx) =>
+      tx.label.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [transactions, searchQuery]);
 
   // Custom Toast state
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -880,6 +888,26 @@ export default function App() {
                     Live database feeds and custom input modifications
                   </p>
                 </div>
+                {/* Real-time search/filter input field */}
+                <div className="relative w-full md:w-72">
+                  <span className="absolute left-2.5 top-2 text-cyan-500/60 font-mono text-[9px] uppercase font-bold">Search:</span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Filter by label or vendor name..."
+                    className="bg-slate-950/85 border border-cyan-500/20 text-slate-100 placeholder-slate-500 text-xs rounded py-1.5 pl-14 pr-7 focus:outline-none focus:border-cyan-400 w-full transition-all duration-150 h-8 font-mono select-text"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1.5 text-slate-400 hover:text-cyan-400 cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Add Custom Expensed Item Form */}
@@ -979,8 +1007,14 @@ export default function App() {
                           No active spend logs detected in current workspace cache.
                         </td>
                       </tr>
+                    ) : filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-cyan-500/80 font-mono font-bold">
+                          No transaction records matching "{searchQuery}" filter.
+                        </td>
+                      </tr>
                     ) : (
-                      transactions.map((tx) => (
+                      filteredTransactions.map((tx) => (
                         <tr
                           key={tx.id}
                           className={`hover:bg-slate-900/60 transition-colors ${
