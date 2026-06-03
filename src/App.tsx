@@ -217,6 +217,7 @@ export default function App() {
   const [newCategory, setNewCategory] = useState<TransactionCategory>("SaaS Subscriptions");
   const [newDate, setNewDate] = useState<string>("2026-05-20");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isAnomalyDismissed, setIsAnomalyDismissed] = useState<boolean>(false);
 
   // Filtered transactions by label or vendor name in real-time
   const filteredTransactions = React.useMemo(() => {
@@ -252,6 +253,17 @@ export default function App() {
     elapsedDays > 0 ? (activeAggregate / elapsedDays) * totalDaysInMonth : activeAggregate;
   const isCurrentlyBreaching = projectedRunRate > budget;
   const savingsRequired = Math.max(0, projectedRunRate - budget);
+
+  // Anomaly Detection: Single transaction amount exceeds 30% of total budget
+  const anomalies = React.useMemo(() => {
+    return transactions.filter((tx) => tx.amount > budget * 0.3);
+  }, [transactions, budget]);
+
+  // Reset manual dismiss state if the number of anomalies changes
+  const anomaliesCount = anomalies.length;
+  useEffect(() => {
+    setIsAnomalyDismissed(false);
+  }, [anomaliesCount]);
 
   // Generate 30-day projection chart dataset
   const chartData = React.useMemo(() => {
@@ -398,7 +410,11 @@ export default function App() {
     };
 
     setTransactions((prev) => [item, ...prev]);
-    addToast(`Added expenditure: ${newLabel} ($${val.toLocaleString()})`, "success");
+    if (val > budget * 0.3) {
+      addToast(`Anomaly Triggered! ${newLabel} ($${val.toLocaleString()}) exceeds 30% of your monthly budget criteria!`, "error");
+    } else {
+      addToast(`Added expenditure: ${newLabel} ($${val.toLocaleString()})`, "success");
+    }
     setNewLabel("");
     setNewAmount("");
   };
@@ -623,9 +639,19 @@ export default function App() {
               <h1 className="text-2xl md:text-3xl font-black tracking-tighter flex items-center gap-2">
                 FINOVA <span className="text-cyan-400 font-normal">X SPEND COPILOT</span>
               </h1>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider">
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider whitespace-nowrap">
                 Active Stability Guard
               </span>
+              {anomalies.length > 0 && isAnomalyDismissed && (
+                <button
+                  onClick={() => setIsAnomalyDismissed(false)}
+                  className="text-[9px] font-bold px-2 py-0.5 rounded bg-rose-950/65 hover:bg-rose-950 text-rose-400 border border-rose-500/35 hover:border-rose-400 uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all duration-150 animate-pulse"
+                  title="Restore hidden anomaly exceptions warning"
+                >
+                  <AlertTriangle className="w-2.5 h-2.5 text-rose-400" />
+                  {anomalies.length} Anomaly {anomalies.length === 1 ? "Alert" : "Alerts"} (Hidden)
+                </button>
+              )}
             </div>
             <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">
               AI Re-optimization Spend Engine // System-wide Control Center V2.4.0-STABLE
@@ -687,6 +713,118 @@ export default function App() {
         <main className="grid grid-cols-12 gap-6 items-stretch">
           {/* Left Wing Actions Area (Core metrics and LED table ledger list) */}
           <section className="col-span-12 xl:col-span-8 flex flex-col space-y-5">
+            {/* Anomaly Detected Warning Card if a single transaction exceeds 30% of total budget */}
+            <AnimatePresence>
+              {anomalies.length > 0 && !isAnomalyDismissed && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, height: "auto", scale: 1 }}
+                  exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="overline-card bg-rose-950/20 backdrop-blur-md p-5 rounded-sm border border-rose-500/30 border-l-4 border-l-rose-500 flex flex-col space-y-4 shadow-[0_4px_20px_rgba(244,63,94,0.15)] relative">
+                    {/* Header line */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-5 h-5 text-rose-500 animate-pulse shrink-0" />
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-widest text-rose-400 font-mono">
+                            Anomaly Detected // Safety Risk Alert
+                          </h3>
+                          <p className="text-[10px] text-slate-300 uppercase mt-0.5 font-mono">
+                            Single transaction exceeds 30% of your monthly budget criteria limit
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Action buttons on header */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-mono font-bold bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider">
+                          {anomalies.length} {anomalies.length === 1 ? "EXCEPTION" : "EXCEPTIONS"} FLAGGED
+                        </span>
+                        <button
+                          onClick={() => setIsAnomalyDismissed(true)}
+                          className="text-slate-400 hover:text-rose-400 p-1 hover:bg-white/5 rounded transition-all duration-150 cursor-pointer"
+                          title="Minimize Alert"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Explanatory text */}
+                    <p className="text-xs text-slate-300 leading-relaxed font-sans max-w-4xl">
+                      Security monitors flagged <span className="text-rose-400 font-bold font-mono">{anomalies.length}</span> record{anomalies.length > 1 ? "s" : ""} where a single expenditure individually exceeds the <span className="text-rose-400 font-bold font-mono">${(budget * 0.3).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> safety threshold level (30% of total <span className="font-mono font-bold">${budget.toLocaleString()}</span> criteria). Consider isolating SaaS license seats, scaling server environments, or executing dynamic freezing strategies immediately.
+                    </p>
+
+                    {/* Anomalous ledger sub-table element list */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                      {anomalies.map((tx) => {
+                        const pctOfBudget = ((tx.amount / budget) * 105).toFixed(1); // Adjust calculated pct
+                        const actualPct = ((tx.amount / budget) * 100).toFixed(1);
+                        return (
+                          <div 
+                            key={tx.id} 
+                            className={`p-3 rounded-sm border flex flex-col justify-between space-y-2.5 transition-all duration-150 ${
+                              tx.isFrozen 
+                                ? "bg-slate-950/45 border-emerald-500/20 hover:border-emerald-500/40" 
+                                : "bg-slate-950/60 border-rose-500/20 hover:border-rose-500/40"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <span className={`text-xs font-bold block truncate ${tx.isFrozen ? "line-through text-slate-500 font-normal" : "text-slate-100"}`}>
+                                  {tx.label}
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tight block mt-0.5">
+                                  {tx.category} • {tx.date}
+                                </span>
+                              </div>
+                              <span className="text-xs font-mono font-black text-slate-100 shrink-0">
+                                ${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3 text-[10px] font-mono">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-1.5 h-1.5 rounded-full ${tx.isFrozen ? "bg-[#39ff14] shadow-[0_0_6px_#39ff14]" : "bg-rose-500 shadow-[0_0_6px_#ef4444]"}`} />
+                                <span className={tx.isFrozen ? "text-[#39ff14] font-black uppercase" : "text-rose-400 font-bold uppercase"}>
+                                  {tx.isFrozen ? "Muted / Frozen" : `${actualPct}% of Budget`}
+                                </span>
+                              </div>
+
+                              {/* Interactive stability control action toggle */}
+                              <button
+                                onClick={() => toggleFreezeTransaction(tx.id)}
+                                className={`text-[9px] uppercase font-bold px-2 py-1 rounded border transition-all duration-150 cursor-pointer flex items-center gap-1 ${
+                                  tx.isFrozen 
+                                    ? "bg-[#39ff14]/10 hover:bg-[#39ff14]/20 border-[#39ff14]/20 hover:border-[#39ff14] text-[#39ff14]" 
+                                    : "bg-rose-950/30 hover:bg-rose-950/50 border-rose-500/35 hover:border-rose-400 text-rose-300 hover:text-rose-100"
+                                }`}
+                              >
+                                {tx.isFrozen ? (
+                                  <>
+                                    <Unlock className="w-2.5 h-2.5" />
+                                    Unfreeze
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-2.5 h-2.5" />
+                                    Freeze Expense
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* 3 Metric Cards row conforming to exact PRD specs and Frosted Glass layouts */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Card 1: Active Spending Aggregate */}
