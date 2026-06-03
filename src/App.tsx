@@ -115,7 +115,11 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
                 <span className="text-slate-400">{entry.name}:</span>
               </span>
-              <span className="font-mono font-bold text-slate-100">${Number(entry.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="font-mono font-bold text-slate-100">
+                {entry.value !== undefined && entry.value !== null && !isNaN(Number(entry.value))
+                  ? `$${Number(entry.value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : "N/A"}
+              </span>
             </div>
           ))}
         </div>
@@ -216,8 +220,11 @@ export default function App() {
 
   // Filtered transactions by label or vendor name in real-time
   const filteredTransactions = React.useMemo(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) return transactions;
     return transactions.filter((tx) =>
-      tx.label.toLowerCase().includes(searchQuery.toLowerCase())
+      tx.label.toLowerCase().includes(trimmed) ||
+      tx.category.toLowerCase().includes(trimmed)
     );
   }, [transactions, searchQuery]);
 
@@ -903,7 +910,7 @@ export default function App() {
                 </div>
                 {/* Real-time search/filter input field */}
                 <div className="relative w-full md:w-72">
-                  <span className="absolute left-2.5 top-2 text-cyan-500/60 font-mono text-[9px] uppercase font-bold">Search:</span>
+                  <span className="absolute left-2.5 top-2.5 text-cyan-500/60 font-mono text-[9px] uppercase font-bold">Search:</span>
                   <input
                     type="text"
                     value={searchQuery}
@@ -914,7 +921,7 @@ export default function App() {
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1.5 text-slate-400 hover:text-cyan-400 cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 cursor-pointer"
                       title="Clear search"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -1034,15 +1041,17 @@ export default function App() {
                             tx.isFrozen ? "bg-[#0c1e3e]/20 text-slate-500" : ""
                           }`}
                         >
-                          <td className="p-3 font-bold flex items-center gap-2">
-                            {tx.isFrozen ? (
-                              <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
-                            ) : (
-                              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
-                            )}
-                            <span className={tx.isFrozen ? "line-through text-slate-500" : "text-slate-100"}>
-                              {tx.label}
-                            </span>
+                          <td className="p-3 font-bold">
+                            <div className="flex items-center gap-2">
+                              {tx.isFrozen ? (
+                                <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
+                              ) : (
+                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                              )}
+                              <span className={tx.isFrozen ? "line-through text-slate-500 font-normal" : "text-slate-100"}>
+                                {tx.label}
+                              </span>
+                            </div>
                           </td>
                           <td className="p-3">
                             <span
